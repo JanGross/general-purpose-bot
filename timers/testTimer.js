@@ -1,6 +1,6 @@
 module.exports = {
 	timeout: 1000,
-	global: true,
+    immediate: true,
 	name: 'Test timer every 1 sec',
     data: {
         i: 0

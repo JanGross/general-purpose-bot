@@ -48,6 +48,7 @@ client.on(Events.ClientReady, () => {
 			timer.tick(client, timer);
 		}, timer.timeout);
 		timer.instance = timerInstance;
+		if (timer.immediate) { timer.tick(client, timer) }
 	}
 });
 
