@@ -6,7 +6,7 @@ module.exports = {
         const channelId = '1170190197384814762';
         const channel = await client.channels.fetch(channelId);
 
-        console.log(`Running cleanup task for ${channel.guild.name}/${channel.name}`);
+        console.log(`[TIMER] Running cleanup task for ${channel.guild.name}/${channel.name}`);
         channel.messages.fetch({ limit: 100 }).then(messages => {
             //Iterate through the messages here with the variable "messages".
             messages.forEach(message => {

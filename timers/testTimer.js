@@ -6,7 +6,7 @@ module.exports = {
         i: 0
     },
 	async tick(client, timer) {
-		console.log(`Test timer ticked ${timer.data.i}`);
+		console.log(`[TIMER] Test timer ticked ${timer.data.i}`);
         timer.data.i++;
         if(timer.data.i >= 5) {
             clearInterval(timer.instance);
