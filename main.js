@@ -36,4 +36,19 @@ for (const file of eventFiles) {
 	}
 }
 
+client.on(Events.ClientReady, () => {
+	//setup timers
+	const timersPath = path.join(__dirname, 'timers');
+	const timerFiles = fs.readdirSync(timersPath).filter(file => file.endsWith('.js'));
+	for (const file of timerFiles) {
+		const filePath = path.join(timersPath, file);
+		const timer = require(filePath);
+		console.log(`Started Timer ${timer.name}`);
+		let timerInstance = setInterval(() => {
+			timer.tick(client, timer);
+		}, timer.timeout);
+		timer.instance = timerInstance;
+	}
+});
+
 client.login(token);
