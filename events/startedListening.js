@@ -21,23 +21,21 @@ module.exports = {
             }
         }
 
+        if(!(guild.id in subscribers)) {
+            return;
+        }
+
+        let role = guild.roles.cache.get(subscribers[guild.id]['role']);
+
         if (isListening) {
-            if (guild.id in subscribers) {
-                {
-                    let role = guild.roles.cache.get(subscribers[guild.id]['role']);
-                    console.log(`[ROLE] Assigning listen role to ${member.displayName} in ${guild.name}`);
-                    await member.roles.add(role);
-                }
-            } else {
-                if (guild.id in subscribers) {
-                    let role = guild.roles.cache.get(subscribers[guild.id]['role']);
-
-                    if (member.roles.cache.has(role)) {
-                        console.log(`[ROLE] Removing listen role from ${member.displayName} in ${guild.name}`);
-                        await member.roles.remove(role);
-                    }
-
-                }
+            if (!member.roles.cache.has(role.id)) {
+                console.log(`[ROLE] Assigning listen role to ${member.displayName} in ${guild.name}`);
+                await member.roles.add(role);
+            }
+        } else {
+            if (member.roles.cache.has(role.id)) {
+                console.log(`[ROLE] Removing listen role from ${member.displayName} in ${guild.name}`);
+                await member.roles.remove(role);
             }
         }
     }
