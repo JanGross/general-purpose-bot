@@ -8,7 +8,8 @@ module.exports = {
         let debugChannel =  await client.channels.fetch('1171410849269809232');
 
         let notifyList = [
-            { guild: '837807020618023002', channel: '938462252720328715' }
+            { guild: '837807020618023002', channel: '938462252720328715' }, //Rice
+            { guild: '442059309581336578', channel: '828398511036563477' } //Minz
         ]
 
 		if(oldMember.avatarURL() !== newMember.avatarURL()) {
