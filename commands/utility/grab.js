@@ -2,7 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
 	category: 'utility',
-	global: false,
+	global: true,
 	data: new SlashCommandBuilder()
 		.setName('grab')
 		.setDescription('Grab things')
