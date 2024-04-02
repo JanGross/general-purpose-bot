@@ -1,5 +1,9 @@
 {
 	"token": "",
 	"clientId": "",
-	"guildId": ""
+	"guildId": "",
+	"spotify": {
+		"clientID": "",
+		"clientSecret": ""
+	}
 }
