@@ -3,6 +3,8 @@ const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits, Options, Partials } = require('discord.js');
 const { token } = require('./config.json');
 
+const localDB = require('./core/db');
+
 const client = new Client({ 
 	intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildPresences, GatewayIntentBits.GuildMessageReactions],
 	partials: [Partials.Message, Partials.Channel, Partials.Reaction],
@@ -12,6 +14,7 @@ const client = new Client({
 	}
 });
 
+client.localDB = localDB;
 client.commands = new Collection();
 const foldersPath = path.join(__dirname, 'commands');
 const commandFolders = fs.readdirSync(foldersPath);

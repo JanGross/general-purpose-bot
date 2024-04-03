@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { spotify } = require('../../config.json');
+const { spotify, lfmKey } = require('../../config.json');
 const SpotifyWebApi = require('spotify-web-api-node');
+const axios = require('axios').default;
 
 module.exports = {
 	category: 'utility',
@@ -29,12 +30,16 @@ module.exports = {
 				{ name: '10', value: '<:10:1221744572326215680>' },
 			))
 		.addIntegerOption(option =>
-				option.setName('scrobbles')
-				.setDescription('Your scrobble count at the time of submission')
+				option.setName('scrobbles_override')
+				.setDescription('Override your scrobble count. Otherwise fetches from LFM (use /lfm link to add account)')
 				.setRequired(false))
 		.addStringOption(option =>
-			option.setName('title_override')
-				.setDescription('Custom title, otherwise uses title from Spotify')
+			option.setName('artist')
+				.setDescription('Override artist, otherwise uses artist from Spotify')
+				.setRequired(false))
+		.addStringOption(option =>
+			option.setName('songname')
+				.setDescription('Override song name, otherwise uses name from Spotify')
 				.setRequired(false))
 		.addStringOption(option =>
 			option.setName('footer_override')
@@ -58,8 +63,11 @@ module.exports = {
 		let urls = interaction.options.getString('links', true).split(" ");
 		
 		let title = ' ';
-		let description = '';
+		let description = ' ';
 		let spotifyID = null;
+		let artists = '';
+		let songName = '';
+		let mainArtist = '';
 		
 		const trackEmbed = new EmbedBuilder()
 		.setColor(Math.floor(Math.random() * 16777214) + 1)
@@ -96,7 +104,9 @@ module.exports = {
 		if(spotifyID) {
 			let spotifyTrack = await this.spotifyAPI.getTrack(spotifyID);
 			trackEmbed.setImage(spotifyTrack['body'].album.images[0].url);
-			title = `${spotifyTrack['body'].name} - ${spotifyTrack['body'].artists.map(a => a.name).join(', ')}`;
+			songName = spotifyTrack['body'].name;
+			mainArtist = spotifyTrack['body'].artists[0].name;
+			artists = spotifyTrack['body'].artists.map(a => a.name).join(', ');
 			let releaseDate =  new Date(spotifyTrack['body'].album.release_date).toDateString();
 			description = `From the album **${spotifyTrack['body'].album.name}**\nReleased **${releaseDate}**\n\n` + description;
 		}
@@ -104,8 +114,12 @@ module.exports = {
 		if(interaction.options.getAttachment('cover_override')) {
 			trackEmbed.setImage(interaction.options.getAttachment('cover_override').url);
 		}
+		songName = interaction.options.getString('songname', false) ?? songName;
+		artists = interaction.options.getString('artist', false) ?? artists;
+		mainArtist = interaction.options.getString('artist', false) ?? mainArtist;
+		
+		title = `${songName} - ${artists}`;
 
-		title = interaction.options.getString('title_override', false) ?? title;
 		trackEmbed.setTitle(`${title}`);
 
 		let submitterName = interaction.member.displayName;
@@ -118,10 +132,42 @@ module.exports = {
 			)
 		}
 
-		if(interaction.options.getInteger('scrobbles', false)) {
+		let db = await interaction.client.localDB;
+		let dbResult = await db.get(`SELECT * FROM lastfm WHERE discord_id = ?`,[interaction.member.id]);
+		let lfmUsername = dbResult['lastfm_name'];
+		let lfmData = await axios.get(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${lfmKey}&artist=${mainArtist}&track=${songName}&format=json&user=${lfmUsername}`);
+
+		if(interaction.options.getInteger('scrobbles', false) || lfmData.data['track']?.['userplaycount'] > 0) {
 			trackEmbed.addFields(
-				{ name: `${submitterName} scrobbled this`, value: `${interaction.options.getInteger('scrobbles', false)} times so far`, inline: true },
+				{ name: `${submitterName} scrobbled this`, value: `${interaction.options.getInteger('scrobbles', false) ?? lfmData.data['track']['userplaycount']} times so far`, inline: true },
 			)
+		} 
+
+		if(lfmData.data['track']) {
+			description += `<:lfm:1225099203039203338> [View on LFM](${lfmData.data['track']['url']})`;
+			let tags = lfmData.data['track']['toptags']['tag'].map(a => a.name);
+			console.log(lfmData.data['track']);
+			let listeners = this.numToHumanReadable(lfmData.data['track']['listeners']);
+			let globalScrobbles = this.numToHumanReadable(lfmData.data['track']['playcount']);
+
+			trackEmbed.addFields(
+				{ name: `LFM Global`, value: `Listeners: ${listeners}\nScrobbles: ${globalScrobbles}\n`, inline: false },
+			)
+
+			let tagHeader = 'Tags';
+			if(!tags) {
+				//artist tag fallback
+				let lfmArtistTags = await axios.get(`https://ws.audioscrobbler.com/2.0/?method=artist.getTopTags&api_key=${lfmKey}&artist=${mainArtist}&format=json`);
+				console.log(lfmArtistTags);
+				tags = lfmArtistTags.data['toptags']['tag'].map(a => a.name);
+				tagHeader = `Artist ${tagHeader}`;
+			}
+			if(tags) {
+				tags = this.joinLineBreak(tags, ', ', 3);
+				trackEmbed.addFields(
+					{ name: `${tagHeader}`, value: `${tags.substr(0,60)}${tags.length > 60 ? '...' : ''}`, inline: true },
+				)
+			}
 		}
 
 		if(!description) {
@@ -136,4 +182,21 @@ module.exports = {
 		let response = await interaction.reply({content: 'done', ephemeral: true});
 		await response.delete();
 	},
+	numToHumanReadable: function(num) {
+		if (num > 1000000 ) {
+			return `${(num/1000000).toFixed(1)}M`;
+		}
+		if (num > 1000 ) {
+			return `${(num/1000).toFixed(1)}K`;
+		}
+		return num;
+	},
+	joinLineBreak: function(arr, joinChar, n) {
+		let groupedArray = [];
+		for (let index = 0; index < arr.length; index += n) {
+			let joined = index + n < arr.length ? arr.slice(index,index+n).join(joinChar) : arr.slice(index).join(joinChar);	
+			groupedArray.push(joined);
+		}
+		return groupedArray.join('\n');
+	}
 };
