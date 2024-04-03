@@ -74,31 +74,30 @@ module.exports = {
 		.setDescription(`asdasdasda`)
 		.setTimestamp();
 		
+		let links = [];
 		for (let index = 0; index < urls.length; index++) {
 			let url = urls[index];
 
 			if (url.startsWith('https://listen.minzkraut.com/')) {
-				description += `[<:drmoe:1220702607836839956> Navidrome](${url})  `
+				links.push(`[<:drmoe:1220702607836839956> Navidrome ](${url})`);
 				continue;
 			}
 			if (url.startsWith('https://open.spotify.com/')) {
 				url = url.split('?')[0];
-				description += `[<:sptfy:1224677302109995078> Spotify](${url})  `;
+				links.push(`[<:sptfy:1224677302109995078> Spotify ](${url})`);
 				//https://open.spotify.com/track/4FuOHRPC3ZIQ7VQd7KMbds?si=cadd634ea5a14689
 				spotifyID = url.split('/').pop();
 				continue;
 			}
 			if (url.startsWith('https://listen.tidal.com/')) {
-				description += `[<:tidal:1221732946525032498> Tidal](${url})  `
+				links.push(`[<:tidal:1221732946525032498> Tidal ](${url})`);
 				continue;
 			}
 			if (url.startsWith('https://www.youtube.com/')) {
-				description += `[<:ytbm:1224704771248750622>  Youtube](${url})  `
+				links.push(`[<:ytbm:1224704771248750622>  Youtube ](${url})`);
 				continue;
 			}
-
 		}
-		
 		
 		
 		if(spotifyID) {
@@ -134,7 +133,7 @@ module.exports = {
 
 		let db = await interaction.client.localDB;
 		let dbResult = await db.get(`SELECT * FROM lastfm WHERE discord_id = ?`,[interaction.member.id]);
-		let lfmUsername = dbResult['lastfm_name'];
+		let lfmUsername = dbResult?.['lastfm_name'];
 		let lfmData = await axios.get(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${lfmKey}&artist=${mainArtist}&track=${songName}&format=json&user=${lfmUsername}`);
 
 		if(interaction.options.getInteger('scrobbles', false) || lfmData.data['track']?.['userplaycount'] > 0) {
@@ -144,14 +143,14 @@ module.exports = {
 		} 
 
 		if(lfmData.data['track']) {
-			description += `<:lfm:1225099203039203338> [View on LFM](${lfmData.data['track']['url']})`;
+			links.push(`<:lfm:1225099203039203338> [View on LFM](${lfmData.data['track']['url']})`);
 			let tags = lfmData.data['track']['toptags']['tag'].map(a => a.name);
 			console.log(lfmData.data['track']);
 			let listeners = this.numToHumanReadable(lfmData.data['track']['listeners']);
 			let globalScrobbles = this.numToHumanReadable(lfmData.data['track']['playcount']);
 
 			trackEmbed.addFields(
-				{ name: `LFM Global`, value: `Listeners: ${listeners}\nScrobbles: ${globalScrobbles}\n`, inline: false },
+				{ name: `LFM Global`, value: `Listeners: ${listeners} • Scrobbles: ${globalScrobbles}\n`, inline: false },
 			)
 
 			let tagHeader = 'Tags';
@@ -163,12 +162,14 @@ module.exports = {
 				tagHeader = `Artist ${tagHeader}`;
 			}
 			if(tags) {
-				tags = this.joinLineBreak(tags, ', ', 3);
+				tags = this.joinLineBreak(tags, ', ', 4);
 				trackEmbed.addFields(
 					{ name: `${tagHeader}`, value: `${tags.substr(0,60)}${tags.length > 60 ? '...' : ''}`, inline: true },
 				)
 			}
 		}
+
+		description = `${description}\n${this.joinLineBreak(links, ' ∘ ', 3)}`
 
 		if(!description) {
 			await interaction.reply({content: 'Sorry, no valid link has bee supplied.', ephemeral: true });
