@@ -44,7 +44,41 @@ module.exports = {
 		if (lfmUsername) {
 			let songName = title.split(' - ')[0];
 			let artistName = title.split(' - ').slice(1);
+			console.log('Trying original dash split')
+			console.log(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${lfmKey}&artist=${artistName}&track=${songName}&format=json&user=${lfmUsername}`);
 			let lfmData = await axios.get(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${lfmKey}&artist=${artistName}&track=${songName}&format=json&user=${lfmUsername}`);
+			
+			if(!lfmData.data['track']) {
+				console.log("Trying with dot split");
+				songName = title.split('·')[0];
+				artistName = title.split('·').slice(1).join('');
+				artistName = artistName.split(',')[0]
+				console.log(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${lfmKey}&artist=${artistName}&track=${songName}&format=json&user=${lfmUsername}`);
+				lfmData = await axios.get(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${lfmKey}&artist=${artistName}&track=${songName}&format=json&user=${lfmUsername}`);
+			}
+			if(!lfmData.data['track']) {
+				console.log("Trying with last part as artist using dash split");
+				let parts = title.split(' - ');
+				artistName = parts.pop();
+				artistName = artistName.split(',')[0]
+				songName = parts.join(' - ');
+				console.log(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${lfmKey}&artist=${artistName}&track=${songName}&format=json&user=${lfmUsername}`);
+				lfmData = await axios.get(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${lfmKey}&artist=${artistName}&track=${songName}&format=json&user=${lfmUsername}`);
+			}
+			if(!lfmData.data['track']) {
+				console.log("Trying with dot replaced using last part as artist and sanitized concat");
+				let parts = title.replace(' · ', ' - ').split(' - ');
+				artistName = parts.pop().split(' & ')[0];
+				artistName = artistName.split(',')[0]
+				songName = parts.join(' - ');
+				console.log(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${lfmKey}&artist=${artistName}&track=${songName}&format=json&user=${lfmUsername}`);
+				lfmData = await axios.get(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${lfmKey}&artist=${artistName}&track=${songName}&format=json&user=${lfmUsername}`);
+				console.log(lfmData.data);
+			}
+
+			if(!lfmData.data['track']) {
+				console.log('No match');
+			}
 			if (lfmData.data['track']?.['userplaycount'] > 0) {
 				reply = `${reply}\nAfter listening ${lfmData.data['track']?.['userplaycount']} times`;
 			}
