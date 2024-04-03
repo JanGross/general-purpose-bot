@@ -1,10 +1,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, Events, GatewayIntentBits, Options } = require('discord.js');
+const { Client, Collection, Events, GatewayIntentBits, Options, Partials } = require('discord.js');
 const { token } = require('./config.json');
 
 const client = new Client({ 
-	intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildPresences],
+	intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildPresences, GatewayIntentBits.GuildMessageReactions],
+	partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 	sweepers: { 
 		...Options.DefaultSweeperSettings, 
 		reactions: { interval: 300, filter: () => () => { return true } } 
