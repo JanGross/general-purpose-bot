@@ -96,6 +96,6 @@ module.exports = {
         interaction.channel.send({ embeds: [trackEmbed] });
 
 		let response = await interaction.reply({content: 'done', ephemeral: true});
-//		await response.delete();
+		await response.delete();
 	},
 };
