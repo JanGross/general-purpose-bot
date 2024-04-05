@@ -41,10 +41,6 @@ module.exports = {
 			option.setName('songname')
 				.setDescription('Override song name, otherwise uses name from Spotify')
 				.setRequired(false))
-		.addStringOption(option =>
-			option.setName('footer_override')
-				.setDescription('Custom footer')
-				.setRequired(false))
 		.addAttachmentOption(option =>
 			option.setName('cover_override')
 			.setDescription('Uses this image instead of Spotofy metadata')
@@ -110,7 +106,7 @@ module.exports = {
 		
 		if(spotifyID) {
 			let spotifyTrack = await this.spotifyAPI.getTrack(spotifyID);
-			trackEmbed.setImage(spotifyTrack['body'].album.images[0].url);
+			trackEmbed.setThumbnail(spotifyTrack['body'].album.images[0].url);
 			songName = spotifyTrack['body'].name;
 			mainArtist = spotifyTrack['body'].artists[0].name;
 			artists = spotifyTrack['body'].artists.map(a => a.name).join(', ');
@@ -119,7 +115,7 @@ module.exports = {
 		}
 		
 		if(interaction.options.getAttachment('cover_override')) {
-			trackEmbed.setImage(interaction.options.getAttachment('cover_override').url);
+			trackEmbed.setThumbnail(interaction.options.getAttachment('cover_override').url);
 		}
 		songName = interaction.options.getString('songname', false) ?? songName;
 		artists = interaction.options.getString('artist', false) ?? artists;
@@ -128,14 +124,13 @@ module.exports = {
 		title = `${songName} - ${artists}`;
 
 		trackEmbed.setTitle(`${title}`);
-
+		
 		let submitterName = interaction.member.displayName;
-		let footer = interaction.options.getString('footer_override', false) ?? `Submitted by ${submitterName}`;
-		trackEmbed.setFooter({text: footer });
+		let footer = `Submitted by ${submitterName} `;
 		
 		if(interaction.options.getString('rating', false)) {
 			trackEmbed.addFields(
-				{ name: `${submitterName} rated this`, value: `${interaction.options.getString('rating', false)} out of 10`, inline: true },
+				{ name: `${submitterName} rated this`, value: `${interaction.options.getString('rating', false)} out of **10**`, inline: true },
 			)
 		}
 
@@ -146,7 +141,7 @@ module.exports = {
 
 		if(interaction.options.getInteger('scrobbles', false) || lfmData.data['track']?.['userplaycount'] > 0) {
 			trackEmbed.addFields(
-				{ name: `${submitterName} scrobbled this`, value: `${interaction.options.getInteger('scrobbles', false) ?? lfmData.data['track']['userplaycount']} times so far`, inline: true },
+				{ name: `${submitterName} scrobbled this`, value: `**${interaction.options.getInteger('scrobbles', false) ?? lfmData.data['track']['userplaycount']}** times so far`, inline: true },
 			)
 		} 
 
@@ -156,28 +151,23 @@ module.exports = {
 			console.log(tags);
 			let listeners = this.numToHumanReadable(lfmData.data['track']['listeners']);
 			let globalScrobbles = this.numToHumanReadable(lfmData.data['track']['playcount']);
-
-			trackEmbed.addFields(
-				{ name: `LFM Global`, value: `Listeners: ${listeners} • Scrobbles: ${globalScrobbles}\n`, inline: false },
-			)
-
-			let tagHeader = 'Tags';
+			footer += `∘ Listeners: ${listeners} • Scrobbles: ${globalScrobbles}`;
+			
+			let tagContent = '';
 			if(tags.length === 0) {
 				//artist tag fallback
 				let lfmArtistTags = await axios.get(`https://ws.audioscrobbler.com/2.0/?method=artist.getTopTags&api_key=${lfmKey}&artist=${mainArtist}&format=json`);
 				console.log(lfmArtistTags);
 				tags = lfmArtistTags.data['toptags']['tag'].map(a => a.name);
-				tagHeader = `Artist ${tagHeader}`;
 			}
-			if(tags) {
-				tags = this.joinLineBreak(tags, ', ', 4);
+			if(tags.length > 1) {
+				tags = this.joinLineBreak(tags, ', ', 3);
 				trackEmbed.addFields(
-					{ name: `${tagHeader}`, value: `${tags.substr(0,60)}${tags.length > 60 ? '...' : ''}`, inline: true },
+					{ name: `Tags`, value: `${tags.substr(0,60)}${tags.length > 60 ? '...' : ''}`, inline: true },
 				)
 			}
-		}
 
-		description = `${description}\n${this.joinLineBreak(links, ' ∘ ', 3)}`
+		}
 
 		if(!description) {
 			await interaction.reply({content: 'Sorry, no valid link has bee supplied.', ephemeral: true });
@@ -185,7 +175,12 @@ module.exports = {
 		}
 
 		trackEmbed.setDescription(description);
-		
+		trackEmbed.addFields(
+			{ name: 'Links', value: `${this.joinLineBreak(links, ' ∘ ', 4)}` }
+		);
+
+		trackEmbed.setFooter({text: footer });
+
         interaction.channel.send({ embeds: [trackEmbed] });
 
 		let response = await interaction.reply({content: 'done', ephemeral: true});
