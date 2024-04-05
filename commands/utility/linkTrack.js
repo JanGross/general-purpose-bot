@@ -144,8 +144,8 @@ module.exports = {
 
 		if(lfmData.data['track']) {
 			links.push(`<:lfm:1225099203039203338> [View on LFM](${lfmData.data['track']['url']})`);
-			let tags = lfmData.data['track']['toptags']['tag'].map(a => a.name);
-			console.log(lfmData.data['track']);
+			let tags = lfmData.data['track']['toptags']['tag'].map(a => a.name).filter(tag => tag.length >= 2);
+			console.log(tags);
 			let listeners = this.numToHumanReadable(lfmData.data['track']['listeners']);
 			let globalScrobbles = this.numToHumanReadable(lfmData.data['track']['playcount']);
 
@@ -154,7 +154,7 @@ module.exports = {
 			)
 
 			let tagHeader = 'Tags';
-			if(!tags) {
+			if(tags.length === 0) {
 				//artist tag fallback
 				let lfmArtistTags = await axios.get(`https://ws.audioscrobbler.com/2.0/?method=artist.getTopTags&api_key=${lfmKey}&artist=${mainArtist}&format=json`);
 				console.log(lfmArtistTags);
