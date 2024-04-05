@@ -97,6 +97,14 @@ module.exports = {
 				links.push(`[<:ytbm:1224704771248750622>  Youtube ](${url})`);
 				continue;
 			}
+			if (url.startsWith('https://jelly.')) {
+				links.push(`[<:jelly:1225931843279519905>  Jellyfin (${url.split('.')[1]}) ](${url})`);
+				continue;
+			}
+			if (url.startsWith('https://soundcloud.com/') || url.startsWith('https://m.soundcloud.com/')) {
+				links.push(`[<:soundcld:1225702702135119902> Soundcloud ](${url})`);
+				continue;
+			}
 		}
 		
 		
