@@ -50,141 +50,146 @@ module.exports = {
 		clientSecret: spotify.clientSecret,
 	}),
 	async execute(interaction) {
-		let token = await this.spotifyAPI.clientCredentialsGrant().then(
-			function(data) {
-			  return data.body['access_token'];
-			});
-		await this.spotifyAPI.setAccessToken(token);
-
-		let urls = interaction.options.getString('links', true).split(" ");
-		
-		let title = ' ';
-		let description = ' ';
-		let spotifyID = null;
-		let artists = '';
-		let songName = '';
-		let mainArtist = '';
-		
-		const trackEmbed = new EmbedBuilder()
-		.setColor(Math.floor(Math.random() * 16777214) + 1)
-		.setDescription(`asdasdasda`)
-		.setTimestamp();
-		
-		let links = [];
-		for (let index = 0; index < urls.length; index++) {
-			let url = urls[index];
-
-			if (url.startsWith('https://listen.minzkraut.com/')) {
-				links.push(`[<:drmoe:1220702607836839956> Navidrome ](${url})`);
-				continue;
-			}
-			if (url.startsWith('https://open.spotify.com/')) {
-				url = url.split('?')[0];
-				links.push(`[<:sptfy:1224677302109995078> Spotify ](${url})`);
-				//https://open.spotify.com/track/4FuOHRPC3ZIQ7VQd7KMbds?si=cadd634ea5a14689
-				spotifyID = url.split('/').pop();
-				continue;
-			}
-			if (url.startsWith('https://listen.tidal.com/')) {
-				links.push(`[<:tidal:1221732946525032498> Tidal ](${url})`);
-				continue;
-			}
-			if (url.startsWith('https://www.youtube.com/')) {
-				links.push(`[<:ytbm:1224704771248750622>  Youtube ](${url})`);
-				continue;
-			}
-			if (url.startsWith('https://jelly.')) {
-				links.push(`[<:jelly:1225931843279519905>  Jellyfin (${url.split('.')[1]}) ](${url})`);
-				continue;
-			}
-			if (url.startsWith('https://soundcloud.com/') || url.startsWith('https://m.soundcloud.com/')) {
-				links.push(`[<:soundcld:1225702702135119902> Soundcloud ](${url})`);
-				continue;
-			}
-		}
-		
-		
-		if(spotifyID) {
-			let spotifyTrack = await this.spotifyAPI.getTrack(spotifyID);
-			trackEmbed.setThumbnail(spotifyTrack['body'].album.images[0].url);
-			songName = spotifyTrack['body'].name;
-			mainArtist = spotifyTrack['body'].artists[0].name;
-			artists = spotifyTrack['body'].artists.map(a => a.name).join(', ');
-			let releaseDate =  new Date(spotifyTrack['body'].album.release_date).toDateString();
-			description = `From the album **${spotifyTrack['body'].album.name}**\nReleased **${releaseDate}**\n\n` + description;
-		}
-		
-		if(interaction.options.getAttachment('cover_override')) {
-			trackEmbed.setThumbnail(interaction.options.getAttachment('cover_override').url);
-		}
-		songName = interaction.options.getString('songname', false) ?? songName;
-		artists = interaction.options.getString('artist', false) ?? artists;
-		mainArtist = interaction.options.getString('artist', false) ?? mainArtist;
-		
-		title = `${songName} - ${artists}`;
-
-		trackEmbed.setTitle(`${title}`);
-		
-		let submitterName = interaction.member.displayName;
-		let footer = `Submitted by ${submitterName} `;
-		
-		if(interaction.options.getString('rating', false)) {
-			trackEmbed.addFields(
-				{ name: `${submitterName} rated this`, value: `${interaction.options.getString('rating', false)} out of **10**`, inline: true },
-			)
-		}
-
-		let db = await interaction.client.localDB;
-		let dbResult = await db.get(`SELECT * FROM lastfm WHERE discord_id = ?`,[interaction.member.id]);
-		let lfmUsername = dbResult?.['lastfm_name'];
-		let lfmData = await axios.get(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${lfmKey}&artist=${mainArtist}&track=${songName}&format=json&user=${lfmUsername}`);
-
-		if(interaction.options.getInteger('scrobbles', false) || lfmData.data['track']?.['userplaycount'] > 0) {
-			trackEmbed.addFields(
-				{ name: `${submitterName} scrobbled this`, value: `**${interaction.options.getInteger('scrobbles', false) ?? lfmData.data['track']['userplaycount']}** times so far`, inline: true },
-			)
-		} 
-
-		if(lfmData.data['track']) {
-			links.push(`<:lfm:1225099203039203338> [View on LFM](${lfmData.data['track']['url']})`);
-			let tags = lfmData.data['track']['toptags']['tag'].map(a => a.name).filter(tag => tag.length >= 2);
-			console.log(tags);
-			let listeners = this.numToHumanReadable(lfmData.data['track']['listeners']);
-			let globalScrobbles = this.numToHumanReadable(lfmData.data['track']['playcount']);
-			footer += `∘ Listeners: ${listeners} • Scrobbles: ${globalScrobbles}`;
+		try {
+			let token = await this.spotifyAPI.clientCredentialsGrant().then(
+				function(data) {
+				  return data.body['access_token'];
+				});
+			await this.spotifyAPI.setAccessToken(token);
+	
+			let urls = interaction.options.getString('links', true).split(" ");
 			
-			let tagContent = '';
-			if(tags.length === 0) {
-				//artist tag fallback
-				let lfmArtistTags = await axios.get(`https://ws.audioscrobbler.com/2.0/?method=artist.getTopTags&api_key=${lfmKey}&artist=${mainArtist}&format=json`);
-				console.log(lfmArtistTags);
-				tags = lfmArtistTags.data['toptags']['tag'].map(a => a.name);
+			let title = ' ';
+			let description = ' ';
+			let spotifyID = null;
+			let artists = '';
+			let songName = '';
+			let mainArtist = '';
+			
+			const trackEmbed = new EmbedBuilder()
+			.setColor(Math.floor(Math.random() * 16777214) + 1)
+			.setDescription(`asdasdasda`)
+			.setTimestamp();
+			
+			let links = [];
+			for (let index = 0; index < urls.length; index++) {
+				let url = urls[index];
+	
+				if (url.startsWith('https://listen.minzkraut.com/')) {
+					links.push(`[<:drmoe:1220702607836839956> Navidrome ](${url})`);
+					continue;
+				}
+				if (url.startsWith('https://open.spotify.com/')) {
+					url = url.split('?')[0];
+					links.push(`[<:sptfy:1224677302109995078> Spotify ](${url})`);
+					//https://open.spotify.com/track/4FuOHRPC3ZIQ7VQd7KMbds?si=cadd634ea5a14689
+					spotifyID = url.split('/').pop();
+					continue;
+				}
+				if (url.startsWith('https://listen.tidal.com/')) {
+					links.push(`[<:tidal:1221732946525032498> Tidal ](${url})`);
+					continue;
+				}
+				if (url.startsWith('https://www.youtube.com/')) {
+					links.push(`[<:ytbm:1224704771248750622>  Youtube ](${url})`);
+					continue;
+				}
+				if (url.startsWith('https://jelly.')) {
+					links.push(`[<:jelly:1225931843279519905>  Jellyfin (${url.split('.')[1]}) ](${url})`);
+					continue;
+				}
+				if (url.startsWith('https://soundcloud.com/') || url.startsWith('https://m.soundcloud.com/')) {
+					links.push(`[<:soundcld:1225702702135119902> Soundcloud ](${url})`);
+					continue;
+				}
 			}
-			if(tags.length > 1) {
-				tags = this.joinLineBreak(tags, ', ', 3);
+			
+			
+			if(spotifyID) {
+				let spotifyTrack = await this.spotifyAPI.getTrack(spotifyID);
+				trackEmbed.setThumbnail(spotifyTrack['body'].album.images[0].url);
+				songName = spotifyTrack['body'].name;
+				mainArtist = spotifyTrack['body'].artists[0].name;
+				artists = spotifyTrack['body'].artists.map(a => a.name).join(', ');
+				let releaseDate =  new Date(spotifyTrack['body'].album.release_date).toDateString();
+				description = `From the album **${spotifyTrack['body'].album.name}**\nReleased **${releaseDate}**\n\n` + description;
+			}
+			
+			if(interaction.options.getAttachment('cover_override')) {
+				trackEmbed.setThumbnail(interaction.options.getAttachment('cover_override').url);
+			}
+			songName = interaction.options.getString('songname', false) ?? songName;
+			artists = interaction.options.getString('artist', false) ?? artists;
+			mainArtist = interaction.options.getString('artist', false) ?? mainArtist;
+			
+			title = `${songName} - ${artists}`;
+	
+			trackEmbed.setTitle(`${title}`);
+			
+			let submitterName = interaction.member.displayName;
+			let footer = `Submitted by ${submitterName} `;
+			
+			if(interaction.options.getString('rating', false)) {
 				trackEmbed.addFields(
-					{ name: `Tags`, value: `${tags.substr(0,60)}${tags.length > 60 ? '...' : ''}`, inline: true },
+					{ name: `${submitterName} rated this`, value: `${interaction.options.getString('rating', false)} out of **10**`, inline: true },
 				)
 			}
-
+	
+			let db = await interaction.client.localDB;
+			let dbResult = await db.get(`SELECT * FROM lastfm WHERE discord_id = ?`,[interaction.member.id]);
+			let lfmUsername = dbResult?.['lastfm_name'];
+			let lfmData = await axios.get(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${lfmKey}&artist=${mainArtist}&track=${songName}&format=json&user=${lfmUsername}`);
+	
+			if(interaction.options.getInteger('scrobbles', false) || lfmData.data['track']?.['userplaycount'] > 0) {
+				trackEmbed.addFields(
+					{ name: `${submitterName} scrobbled this`, value: `**${interaction.options.getInteger('scrobbles', false) ?? lfmData.data['track']['userplaycount']}** times so far`, inline: true },
+				)
+			} 
+	
+			if(lfmData.data['track']) {
+				links.push(`<:lfm:1225099203039203338> [View on LFM](${lfmData.data['track']['url']})`);
+				let tags = lfmData.data['track']['toptags']['tag'].map(a => a.name).filter(tag => tag.length >= 2);
+				console.log(tags);
+				let listeners = this.numToHumanReadable(lfmData.data['track']['listeners']);
+				let globalScrobbles = this.numToHumanReadable(lfmData.data['track']['playcount']);
+				footer += `∘ Listeners: ${listeners} • Scrobbles: ${globalScrobbles}`;
+				
+				let tagContent = '';
+				if(tags.length === 0) {
+					//artist tag fallback
+					let lfmArtistTags = await axios.get(`https://ws.audioscrobbler.com/2.0/?method=artist.getTopTags&api_key=${lfmKey}&artist=${mainArtist}&format=json`);
+					console.log(lfmArtistTags);
+					tags = lfmArtistTags.data['toptags']['tag'].map(a => a.name);
+				}
+				if(tags.length > 1) {
+					tags = this.joinLineBreak(tags, ', ', 3);
+					trackEmbed.addFields(
+						{ name: `Tags`, value: `${tags.substr(0,60)}${tags.length > 60 ? '...' : ''}`, inline: true },
+					)
+				}
+	
+			}
+	
+			if(!description) {
+				await interaction.reply({content: 'Sorry, no valid link has bee supplied.', ephemeral: true });
+				return;
+			}
+	
+			trackEmbed.setDescription(description);
+			trackEmbed.addFields(
+				{ name: 'Links', value: `${this.joinLineBreak(links, ' ∘ ', 4)}` }
+			);
+	
+			trackEmbed.setFooter({text: footer });
+	
+			interaction.channel.send({ embeds: [trackEmbed] });
+	
+			let response = await interaction.reply({content: 'done', ephemeral: true});
+			await response.delete();
+		} catch (error) {
+			await interaction.reply(`# FUCK \n ${JSON.stringify(error)}`.substring(0,200));
 		}
-
-		if(!description) {
-			await interaction.reply({content: 'Sorry, no valid link has bee supplied.', ephemeral: true });
-			return;
-		}
-
-		trackEmbed.setDescription(description);
-		trackEmbed.addFields(
-			{ name: 'Links', value: `${this.joinLineBreak(links, ' ∘ ', 4)}` }
-		);
-
-		trackEmbed.setFooter({text: footer });
-
-        interaction.channel.send({ embeds: [trackEmbed] });
-
-		let response = await interaction.reply({content: 'done', ephemeral: true});
-		await response.delete();
+		
 	},
 	numToHumanReadable: function(num) {
 		if (num > 1000000 ) {
