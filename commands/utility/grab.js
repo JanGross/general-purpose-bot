@@ -63,7 +63,7 @@ module.exports = {
 
 		collector.on('collect', m => {
 			m.stickers.forEach(sticker => {
-				stickers.push(`https://media.discordapp.net/stickers/${sticker.id}.png`);
+				stickers.push(`https://media.discordapp.net/stickers/${sticker.id}.png?size=1024`);
 				collector.stop();
 			});
 		});
